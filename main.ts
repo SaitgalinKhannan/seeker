@@ -117,32 +117,37 @@ async function handleCommands(message: Api.Message) {
     if (text.includes("ignore")) {
         const id = parseInt(text.substring(6));
         console.log(id)
-        if (!isNaN(id)) {
-            const users = await client.invoke(
-                new Api.users.GetUsers({
-                    id: [id],
-                })
-            );
-            const user = users[0]
+        try {
+            if (!isNaN(id)) {
+                const users = await client.invoke(
+                    new Api.users.GetUsers({
+                        id: [id],
+                    })
+                );
+                const user = users[0]
 
-            if (users.length < 1 || !isApiUser(user)) {
-                await message.reply({message: `Ошибка, пользователь не найден`, parseMode: "html"});
-                return;
-            }
+                if (users.length < 1 || !isApiUser(user)) {
+                    await message.reply({message: `Ошибка, пользователь не найден`, parseMode: "html"});
+                    return;
+                }
 
-            const localUser: User = {
-                id: user.id.valueOf(),
-                name: `${user.firstName} ${user.lastName}`,
-                userName: user.username || "Отсутствует"
-            }
-            const result = addUser(localUser)
-            if (result) {
-                await message.reply({message: `Пользователь <code>${id}</code> добавлено в список`, parseMode: "html"});
+                const localUser: User = {
+                    id: user.id.valueOf(),
+                    name: `${user.firstName} ${user.lastName}`,
+                    userName: user.username || "Отсутствует"
+                }
+                const result = addUser(localUser)
+                if (result) {
+                    await message.reply({message: `Пользователь <code>${id}</code> добавлено в список`, parseMode: "html"});
+                } else {
+                    await message.reply({message: `Пользователь <code>${id}</code> уже есть в списке`, parseMode: "html"});
+                }
             } else {
-                await message.reply({message: `Пользователь <code>${id}</code> уже есть в списке`, parseMode: "html"});
+                await message.reply({message: `Аргумент не найден`, parseMode: "html"});
             }
-        } else {
-            await message.reply({message: `Аргумент не найден`, parseMode: "html"});
+        }catch (e) {
+            await message.reply({message: `Ошибка, пользователь не найден!`, parseMode: "html"});
+            console.error(e);
         }
         return;
     }
@@ -167,80 +172,85 @@ async function handleCommands(message: Api.Message) {
     if (text.includes("chat")) {
         const parts = text.split(" ");
         if (parts.length > 1) {
-            const chatIdentification = parts[1];
-            const typeChats = await client.invoke(
-                new Api.channels.GetChannels({
-                    id: [chatIdentification],
-                })
-            );
-            const channels = typeChats.chats
-            const channel = typeChats.chats[0]
-
-            if (channels.length < 1 || !isApiChannel(channel)) {
-                await message.reply({message: `Ошибка, чат не найден`, parseMode: "html"});
-                return;
-            }
-
-            if (channel.accessHash) {
-                try {
-                    await client.invoke(
-                        new Api.channels.JoinChannel({
-                            channel: new Api.InputChannel({channelId: channel.id, accessHash: channel.accessHash}),
-                        })
-                    );
-                } catch (e) {
-                    await message.reply({
-                        message: `Не удается вступить в чат ${chatIdentification}, сделайте это вручную`,
-                        parseMode: "html"
-                    });
-                    console.error(e)
-                }
-            }
-
-            let joined: boolean = false
-
             try {
-                const dialogs = await client.getDialogs()
-                const ids = dialogs.map(d => d.id)
-                if (ids.some(id => id && (channel.id === id || channel.id.toString() === id.toString().substring(4)))) {
-                    joined = true
+                const chatIdentification = parts[1];
+                const typeChats = await client.invoke(
+                    new Api.channels.GetChannels({
+                        id: [chatIdentification],
+                    })
+                );
+                const channels = typeChats.chats
+                const channel = typeChats.chats[0]
+
+                if (channels.length < 1 || !isApiChannel(channel)) {
+                    await message.reply({message: `Ошибка, чат не найден`, parseMode: "html"});
+                    return;
                 }
-            } catch (e) {
-                console.log(e)
-            }
 
-            if (joined) {
-                let chatLink: string
+                if (channel.accessHash) {
+                    try {
+                        await client.invoke(
+                            new Api.channels.JoinChannel({
+                                channel: new Api.InputChannel({channelId: channel.id, accessHash: channel.accessHash}),
+                            })
+                        );
+                    } catch (e) {
+                        await message.reply({
+                            message: `Не удается вступить в чат ${chatIdentification}, сделайте это вручную`,
+                            parseMode: "html"
+                        });
+                        console.error(e)
+                    }
+                }
 
-                if (channel.username) {
-                    chatLink = `https://t.me/${channel.username}`
+                let joined: boolean = false
+
+                try {
+                    const dialogs = await client.getDialogs()
+                    const ids = dialogs.map(d => d.id)
+                    if (ids.some(id => id && (channel.id === id || channel.id.toString() === id.toString().substring(4)))) {
+                        joined = true
+                    }
+                } catch (e) {
+                    console.log(e)
+                }
+
+                if (joined) {
+                    let chatLink: string
+
+                    if (channel.username) {
+                        chatLink = `https://t.me/${channel.username}`
+                    } else {
+                        chatLink = `https://t.me/c/${channel.id.toString().includes("-100") ? channel.id.toString().substring(3) : channel.id.toString()}/2`
+                    }
+
+                    const localChat: Chat = {
+                        id: channel.id.valueOf(),
+                        name: `${channel.title || "Отсутствует"}`,
+                        link: chatLink
+                    }
+                    const result = addChat(localChat)
+
+                    if (result) {
+                        await message.reply({
+                            message: `Чат <code>${chatIdentification}</code> добавлен в список`,
+                            parseMode: "html"
+                        });
+                    } else {
+                        await message.reply({
+                            message: `Чат <code>${chatIdentification}</code> уже есть в списке`,
+                            parseMode: "html"
+                        });
+                    }
                 } else {
-                    chatLink = `https://t.me/c/${channel.id.toString().includes("-100") ? channel.id.toString().substring(3) : channel.id.toString()}/2`
-                }
-
-                const localChat: Chat = {
-                    id: channel.id.valueOf(),
-                    name: `${channel.title || "Отсутствует"}`,
-                    link: chatLink
-                }
-                const result = addChat(localChat)
-
-                if (result) {
                     await message.reply({
-                        message: `Чат <code>${chatIdentification}</code> добавлен в список`,
+                        message: `Не удается вступить в чат ${chatIdentification}, сделайте это вручную и повторите команду заново`,
                         parseMode: "html"
                     });
-                } else {
-                    await message.reply({
-                        message: `Чат <code>${chatIdentification}</code> уже есть в списке`,
-                        parseMode: "html"
-                    });
                 }
-            } else {
-                await message.reply({
-                    message: `Не удается вступить в чат ${chatIdentification}, сделайте это вручную и повторите команду заново`,
-                    parseMode: "html"
-                });
+            }catch (e) {
+                await message.reply({message: `Ошибка, чат не найден!`, parseMode: "html"});
+                console.error(e);
             }
         } else {
             await message.reply({message: `Аргумент не найден`, parseMode: "html"});
