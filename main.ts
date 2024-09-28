@@ -119,33 +119,53 @@ async function handleCommands(message: Api.Message) {
         console.log(id)
         try {
             if (!isNaN(id)) {
-                const users = await client.invoke(
-                    new Api.users.GetUsers({
-                        id: [id],
-                    })
-                );
+                let users: Api.TypeUser[]
+                try {
+                    users = await client.invoke(
+                        new Api.users.GetUsers({
+                            id: [id],
+                        })
+                    );
+                } catch (e) {
+                    users = []
+                    console.error(e);
+                }
+
                 const user = users[0]
+                let localUser: User
 
                 if (users.length < 1 || !isApiUser(user)) {
-                    await message.reply({message: `Ошибка, пользователь не найден`, parseMode: "html"});
-                    return;
+                    /*await message.reply({message: `Ошибка, пользователь не найден`, parseMode: "html"});
+                    return;*/
+                    localUser = {
+                        id: user.id.valueOf(),
+                        name: "Отсутствует",
+                        userName: "Отсутствует"
+                    }
+                } else {
+                    localUser = {
+                        id: user.id.valueOf(),
+                        name: `${user.firstName} ${user.lastName}`,
+                        userName: user.username || "Отсутствует"
+                    }
                 }
 
-                const localUser: User = {
-                    id: user.id.valueOf(),
-                    name: `${user.firstName} ${user.lastName}`,
-                    userName: user.username || "Отсутствует"
-                }
                 const result = addUser(localUser)
                 if (result) {
-                    await message.reply({message: `Пользователь <code>${id}</code> добавлено в список`, parseMode: "html"});
+                    await message.reply({
+                        message: `Пользователь <code>${id}</code> добавлено в список`,
+                        parseMode: "html"
+                    });
                 } else {
-                    await message.reply({message: `Пользователь <code>${id}</code> уже есть в списке`, parseMode: "html"});
+                    await message.reply({
+                        message: `Пользователь <code>${id}</code> уже есть в списке`,
+                        parseMode: "html"
+                    });
                 }
             } else {
                 await message.reply({message: `Аргумент не найден`, parseMode: "html"});
             }
-        }catch (e) {
+        } catch (e) {
             await message.reply({message: `Ошибка, пользователь не найден!`, parseMode: "html"});
             console.error(e);
         }
@@ -248,7 +268,7 @@ async function handleCommands(message: Api.Message) {
                         parseMode: "html"
                     });
                 }
-            }catch (e) {
+            } catch (e) {
                 await message.reply({message: `Ошибка, чат не найден!`, parseMode: "html"});
                 console.error(e);
             }
