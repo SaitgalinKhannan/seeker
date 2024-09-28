@@ -138,7 +138,7 @@ async function handleCommands(message: Api.Message) {
                     /*await message.reply({message: `Ошибка, пользователь не найден`, parseMode: "html"});
                     return;*/
                     localUser = {
-                        id: user.id.valueOf(),
+                        id: id,
                         name: "Отсутствует",
                         userName: "Отсутствует"
                     }
