@@ -333,6 +333,12 @@ async function handleIncomingMessage(event: NewMessageEvent) {
         return;
     }
 
+    const isFromBlackList = ignores.some(
+        user => user.id === event.message.chatId?.valueOf() ||
+            user.id.toString() === event.message.chatId?.valueOf().toString().substring(4) ||
+            user.id.toString().substring(4) === event.message.chatId?.valueOf().toString() ||
+            user.id.toString().substring(4) === event.message.chatId?.valueOf().toString().substring(4)
+    )
     const matchesCount = findMatches(messageText, keywords).length
     const isFromChats = chats.some(
         chat => chat.id === event.message.chatId?.valueOf() ||
@@ -340,7 +346,7 @@ async function handleIncomingMessage(event: NewMessageEvent) {
             chat.id.toString().substring(4) === event.message.chatId?.valueOf().toString() ||
             chat.id.toString().substring(4) === event.message.chatId?.valueOf().toString().substring(4)
     )
-    if (matchesCount > 0 && isFromChats) {
+    if (matchesCount > 0 && isFromChats && !isFromBlackList) {
         const resultFromAI = await isCurrencyExchange(messageText);
         await handleKeywords(event.message, resultFromAI);
     }
