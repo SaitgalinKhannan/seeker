@@ -333,11 +333,12 @@ async function handleIncomingMessage(event: NewMessageEvent) {
         return;
     }
 
+    const sender = await event.message.getSender()
     const isFromBlackList = ignores.some(
-        user => user.id === event.message.chatId?.valueOf() ||
-            user.id.toString() === event.message.chatId?.valueOf().toString().substring(4) ||
-            user.id.toString().substring(4) === event.message.chatId?.valueOf().toString() ||
-            user.id.toString().substring(4) === event.message.chatId?.valueOf().toString().substring(4)
+        user => user.id === sender?.id.valueOf() ||
+            user.id.toString() === sender?.id.valueOf().toString().substring(4) ||
+            user.id.toString().substring(4) === sender?.id.valueOf().toString() ||
+            user.id.toString().substring(4) === sender?.id.valueOf().toString().substring(4)
     )
     const matchesCount = findMatches(messageText, keywords).length
     const isFromChats = chats.some(
